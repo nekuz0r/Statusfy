@@ -5,6 +5,6 @@ Statusfy
 
 Spotify in your status bar.
 
-<img src="https://raw.github.com/paulyoung/Statusfy/master/screenshot.png" alt="Screenshot" width="439" height="67" />
+<img src="https://raw.github.com/nekuz0r/Statusfy/master/screenshot.png" alt="Screenshot" width="439" height="67" />
 
-[Download](https://github.com/paulyoung/Statusfy/releases)
+[Download](https://github.com/nekuz0r/Statusfy/releases)
