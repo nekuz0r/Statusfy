@@ -11,11 +11,13 @@
 
 static NSString * const SFYPlayerStatePreferenceKey = @"ShowPlayerState";
 static NSString * const SFYPlayerDockIconPreferenceKey = @"YES";
+static NSString * const SFYHideIfStoppedPreferenceKey = @"HideIfStopped";
 
 @interface SFYAppDelegate ()
 
 @property (nonatomic, strong) NSMenuItem *playerStateMenuItem;
 @property (nonatomic, strong) NSMenuItem *dockIconMenuItem;
+@property (nonatomic, strong) NSMenuItem *hideIfStoppedMenuItem;
 @property (nonatomic, strong) NSStatusItem *statusItem;
 
 @end
@@ -26,22 +28,26 @@ static NSString * const SFYPlayerDockIconPreferenceKey = @"YES";
 {
     //Initialize the variable the getDockIconVisibility method checks
     [[NSUserDefaults standardUserDefaults] setBool:YES forKey:SFYPlayerDockIconPreferenceKey];
-    
+
     self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
     self.statusItem.highlightMode = YES;
-    
+
     NSMenu *menu = [[NSMenu alloc] initWithTitle:@""];
-    
-    self.playerStateMenuItem = [[NSMenuItem alloc] initWithTitle:[self determinePlayerStateMenuItemTitle] action:@selector(togglePlayerStateVisibility) keyEquivalent:@""];
-    
+
+    self.playerStateMenuItem = [[NSMenuItem alloc] initWithTitle:@"Hide player state" action:@selector(togglePlayerStateVisibility) keyEquivalent:@""];
+    self.hideIfStoppedMenuItem = [[NSMenuItem alloc] initWithTitle:@"Hide if stopped" action:@selector(toggleHideIfStoppedVisibility) keyEquivalent:@""];
+    [self setMenuItemCheck:self.playerStateMenuItem withValue:![self getPlayerStateVisibility]];
+    [self setMenuItemCheck:self.hideIfStoppedMenuItem withValue:[self getHideIfStopped]];
+
     self.dockIconMenuItem = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Hide Dock Icon", nil) action:@selector(toggleDockIconVisibility) keyEquivalent:@""];
-    
+
     [menu addItem:self.playerStateMenuItem];
     [menu addItem:self.dockIconMenuItem];
+    [menu addItem:self.hideIfStoppedMenuItem];
     [menu addItemWithTitle:NSLocalizedString(@"Quit", nil) action:@selector(quit) keyEquivalent:@"q"];
 
     [self.statusItem setMenu:menu];
-    
+
     [self setStatusItemTitle];
     [NSTimer scheduledTimerWithTimeInterval:1 target:self selector:@selector(setStatusItemTitle) userInfo:nil repeats:YES];
 }
@@ -52,15 +58,16 @@ static NSString * const SFYPlayerDockIconPreferenceKey = @"YES";
 {
     NSString *trackName = [[self executeAppleScript:@"get name of current track"] stringValue];
     NSString *artistName = [[self executeAppleScript:@"get artist of current track"] stringValue];
-    
-    if (trackName && artistName) {
+    NSString *playerState = [self determinePlayerStateText];
+    BOOL shouldHide = [self getHideIfStopped] && ![playerState isEqualToString:@"Playing"];
+
+    if (trackName && artistName && !shouldHide) {
         NSString *titleText = [NSString stringWithFormat:@"%@ - %@", trackName, artistName];
-        
+
         if ([self getPlayerStateVisibility]) {
-            NSString *playerState = [self determinePlayerStateText];
             titleText = [NSString stringWithFormat:@"%@ (%@)", titleText, playerState];
         }
-        
+
         self.statusItem.image = nil;
         self.statusItem.title = titleText;
     }
@@ -97,19 +104,14 @@ static NSString * const SFYPlayerDockIconPreferenceKey = @"YES";
 - (void)togglePlayerStateVisibility
 {
     [self setPlayerStateVisibility:![self getPlayerStateVisibility]];
-    self.playerStateMenuItem.title = [self determinePlayerStateMenuItemTitle];
-}
-
-- (NSString *)determinePlayerStateMenuItemTitle
-{
-    return [self getPlayerStateVisibility] ? NSLocalizedString(@"Hide Player State", nil) : NSLocalizedString(@"Show Player State", nil);
+    [self setMenuItemCheck:self.playerStateMenuItem withValue:![self getPlayerStateVisibility]];
 }
 
 - (NSString *)determinePlayerStateText
 {
     NSString *playerStateText = nil;
     NSString *playerStateConstant = [[self executeAppleScript:@"get player state"] stringValue];
-    
+
     if ([playerStateConstant isEqualToString:@"kPSP"]) {
         playerStateText = NSLocalizedString(@"Playing", nil);
     }
@@ -119,7 +121,7 @@ static NSString * const SFYPlayerDockIconPreferenceKey = @"YES";
     else {
         playerStateText = NSLocalizedString(@"Stopped", nil);
     }
-    
+
     return playerStateText;
 }
 
@@ -139,7 +141,7 @@ static NSString * const SFYPlayerDockIconPreferenceKey = @"YES";
 {
     [self setDockIconVisibility:![self getDockIconVisibility]];
     self.dockIconMenuItem.title = [self determineDockIconMenuItemTitle];
-    
+
     if(![self getDockIconVisibility])
     {
         //Apple recommended method to show and hide dock icon
@@ -156,6 +158,33 @@ static NSString * const SFYPlayerDockIconPreferenceKey = @"YES";
 - (NSString *)determineDockIconMenuItemTitle
 {
     return [self getDockIconVisibility] ? NSLocalizedString(@"Hide Dock Icon", nil) : NSLocalizedString(@"Show Dock Icon", nil);
+}
+
+#pragma mark - Hide if stopped
+
+- (BOOL)getHideIfStopped
+{
+    return [[NSUserDefaults standardUserDefaults] boolForKey:SFYHideIfStoppedPreferenceKey];
+}
+
+- (void)setHideIfStopped:(BOOL)hide
+{
+    [[NSUserDefaults standardUserDefaults] setBool:hide forKey:SFYHideIfStoppedPreferenceKey];
+}
+
+- (void)toggleHideIfStoppedVisibility
+{
+    [self setHideIfStopped:![self getHideIfStopped]];
+    [self setMenuItemCheck:self.hideIfStoppedMenuItem withValue:[self getHideIfStopped]];
+}
+
+- (void)setMenuItemCheck:(NSMenuItem *)item withValue: (BOOL)value
+{
+    if(value) {
+        [item setState:NSOnState];
+    } else {
+        [item setState:NSOffState];
+    }
 }
 
 #pragma mark - Quit
