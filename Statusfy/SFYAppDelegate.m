@@ -10,13 +10,13 @@
 
 
 static NSString * const SFYPlayerStatePreferenceKey = @"ShowPlayerState";
-static NSString * const SFYPlayerDockIconPreferenceKey = @"YES";
+static NSString * const SFYHideDockIconPreferenceKey = @"HideDockIcon";
 static NSString * const SFYHideIfStoppedPreferenceKey = @"HideIfStopped";
 
 @interface SFYAppDelegate ()
 
 @property (nonatomic, strong) NSMenuItem *playerStateMenuItem;
-@property (nonatomic, strong) NSMenuItem *dockIconMenuItem;
+@property (nonatomic, strong) NSMenuItem *hideDockIconMenuItem;
 @property (nonatomic, strong) NSMenuItem *hideIfStoppedMenuItem;
 @property (nonatomic, strong) NSStatusItem *statusItem;
 
@@ -26,23 +26,21 @@ static NSString * const SFYHideIfStoppedPreferenceKey = @"HideIfStopped";
 
 - (void)applicationDidFinishLaunching:(NSNotification * __unused)aNotification
 {
-    //Initialize the variable the getDockIconVisibility method checks
-    [[NSUserDefaults standardUserDefaults] setBool:YES forKey:SFYPlayerDockIconPreferenceKey];
-
     self.statusItem = [[NSStatusBar systemStatusBar] statusItemWithLength:NSVariableStatusItemLength];
     self.statusItem.highlightMode = YES;
 
     NSMenu *menu = [[NSMenu alloc] initWithTitle:@""];
 
     self.playerStateMenuItem = [[NSMenuItem alloc] initWithTitle:@"Hide player state" action:@selector(togglePlayerStateVisibility) keyEquivalent:@""];
+    self.hideDockIconMenuItem = [[NSMenuItem alloc] initWithTitle:@"Hide Dock Icon" action:@selector(toggleHideDockIcon) keyEquivalent:@""];
     self.hideIfStoppedMenuItem = [[NSMenuItem alloc] initWithTitle:@"Hide if stopped" action:@selector(toggleHideIfStoppedVisibility) keyEquivalent:@""];
+    
     [self setMenuItemCheck:self.playerStateMenuItem withValue:![self getPlayerStateVisibility]];
+    [self setMenuItemCheck:self.hideDockIconMenuItem withValue:[self getHideDockIcon]];
     [self setMenuItemCheck:self.hideIfStoppedMenuItem withValue:[self getHideIfStopped]];
 
-    self.dockIconMenuItem = [[NSMenuItem alloc] initWithTitle:NSLocalizedString(@"Hide Dock Icon", nil) action:@selector(toggleDockIconVisibility) keyEquivalent:@""];
-
     [menu addItem:self.playerStateMenuItem];
-    [menu addItem:self.dockIconMenuItem];
+    [menu addItem:self.hideDockIconMenuItem];
     [menu addItem:self.hideIfStoppedMenuItem];
     [menu addItemWithTitle:NSLocalizedString(@"Quit", nil) action:@selector(quit) keyEquivalent:@"q"];
 
@@ -50,6 +48,8 @@ static NSString * const SFYHideIfStoppedPreferenceKey = @"HideIfStopped";
 
     [self setStatusItemTitle];
     [NSTimer scheduledTimerWithTimeInterval:1 target:self selector:@selector(setStatusItemTitle) userInfo:nil repeats:YES];
+    
+    [self applyDockIconVisibility];
 }
 
 #pragma mark - Setting title text
@@ -127,22 +127,28 @@ static NSString * const SFYHideIfStoppedPreferenceKey = @"HideIfStopped";
 
 #pragma mark - Toggle Dock Icon
 
-- (BOOL)getDockIconVisibility
+- (BOOL)getHideDockIcon
 {
-    return [[NSUserDefaults standardUserDefaults] boolForKey:SFYPlayerDockIconPreferenceKey];
+    return [[NSUserDefaults standardUserDefaults] boolForKey:SFYHideDockIconPreferenceKey];
 }
 
-- (void)setDockIconVisibility:(BOOL)visible
+- (void)setHideDockIcon:(BOOL)hide
 {
-   [[NSUserDefaults standardUserDefaults] setBool:visible forKey:SFYPlayerDockIconPreferenceKey];
+   [[NSUserDefaults standardUserDefaults] setBool:hide forKey:SFYHideDockIconPreferenceKey];
 }
 
-- (void)toggleDockIconVisibility
+- (void)toggleHideDockIcon
 {
-    [self setDockIconVisibility:![self getDockIconVisibility]];
-    self.dockIconMenuItem.title = [self determineDockIconMenuItemTitle];
+    BOOL hidden = ![self getHideDockIcon];
+    [self setHideDockIcon:hidden];
+    [self setMenuItemCheck:self.hideDockIconMenuItem withValue:hidden];
+    [self applyDockIconVisibility];
+}
 
-    if(![self getDockIconVisibility])
+- (void) applyDockIconVisibility
+{
+    BOOL hidden = [self getHideDockIcon];
+    if(hidden == TRUE)
     {
         //Apple recommended method to show and hide dock icon
         //hide icon
@@ -153,11 +159,6 @@ static NSString * const SFYHideIfStoppedPreferenceKey = @"HideIfStopped";
         //show icon
         [NSApp setActivationPolicy: NSApplicationActivationPolicyRegular];
     }
-}
-
-- (NSString *)determineDockIconMenuItemTitle
-{
-    return [self getDockIconVisibility] ? NSLocalizedString(@"Hide Dock Icon", nil) : NSLocalizedString(@"Show Dock Icon", nil);
 }
 
 #pragma mark - Hide if stopped

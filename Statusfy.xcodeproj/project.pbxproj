@@ -208,6 +208,9 @@
 				LastUpgradeCheck = 0510;
 				ORGANIZATIONNAME = "Paul Young";
 				TargetAttributes = {
+					2C87974B18FF06E600AE2A45 = {
+						DevelopmentTeam = 4D673LXQ52;
+					};
 					2C87976C18FF06E600AE2A45 = {
 						TestTargetID = 2C87974B18FF06E600AE2A45;
 					};
